@@ -1,17 +1,19 @@
-# render_mermaid.ps1 — Reusable Mermaid -> SVG batch renderer
+﻿# render_mermaid.ps1 — Reusable Mermaid batch renderer (SVG/PNG/PDF)
 # Part of skill: mermaid-svg-renderer
 #
 # Usage:
 #   powershell -ExecutionPolicy Bypass -File render_mermaid.ps1 `
 #       -MdFile ".\my_slides.md" `
 #       -OutDir ".\svg_output" `
+#       -Format "svg" `
 #       -Width 2400 `
 #       -Background transparent
 #
 # Parameters:
 #   -MdFile      Path to the Markdown file containing ```mermaid blocks
-#   -OutDir      Output directory for SVG files (created if absent)
-#   -Width       Render width in pixels (default: 2400; SVG stays vector)
+#   -OutDir      Output directory for images (created if absent)
+#   -Format      Output format: svg, png, or pdf (default: svg)
+#   -Width       Render width in pixels (for PNG, 4800 is recommended for high-res)
 #   -Background  Background color passed to mmdc -b flag (default: transparent)
 #   -Labels      Optional: comma-separated list of base filenames (no extension)
 #                If fewer labels than blocks, remaining files are numbered diagram_NN
@@ -20,7 +22,8 @@ param(
     [Parameter(Mandatory=$true)]
     [string]$MdFile,
 
-    [string]$OutDir      = ".\mermaid_svg",
+    [string]$OutDir      = ".\mermaid_out",
+    [string]$Format      = "svg",
     [int]   $Width       = 2400,
     [string]$Background  = "transparent",
     [string]$Labels      = ""   # comma-separated, optional
@@ -70,7 +73,7 @@ for ($i = 0; $i -lt $total; $i++) {
     }
 
     $mmdFile = Join-Path $OutDir ($label + ".mmd")
-    $svgFile = Join-Path $OutDir ($label + ".svg")
+    $outFile = Join-Path $OutDir ($label + "." + $Format)
 
     # Write temp .mmd
     $code = $found[$i].Groups[1].Value
@@ -80,11 +83,11 @@ for ($i = 0; $i -lt $total; $i++) {
     Write-Host "$prefix ..." -NoNewline
 
     # Call mmdc
-    $result   = & mmdc -i $mmdFile -o $svgFile -b $Background -w $Width 2>&1
+    $result   = & mmdc -i $mmdFile -o $outFile -b $Background -w $Width 2>&1
     $exitCode = $LASTEXITCODE
 
-    if ($exitCode -eq 0 -and (Test-Path $svgFile)) {
-        $sizeKB = [math]::Round((Get-Item $svgFile).Length / 1024, 1)
+    if ($exitCode -eq 0 -and (Test-Path $outFile)) {
+        $sizeKB = [math]::Round((Get-Item $outFile).Length / 1024, 1)
         Write-Host (" OK ({0} KB)" -f $sizeKB)
         $ok++
     } else {
